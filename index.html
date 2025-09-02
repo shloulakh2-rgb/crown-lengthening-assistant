@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Crown Lengthening Assistant</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen p-6">
+
+  <!-- Loading Screen -->
+  <div id="loading" class="text-center text-lg">Loading...</div>
+
+  <!-- Main Content -->
+  <div id="mainContent" style="display:none;">
+    <h1 class="text-2xl font-bold mb-4">Crown Lengthening Assistant</h1>
+    
+    <!-- Case Name -->
+    <div class="mb-4">
+      <label for="caseName" class="block text-gray-700 text-sm mb-1">Case Name:</label>
+      <input type="text" id="caseName" placeholder="Enter case name" class="form-input border p-2 rounded w-full">
+    </div>
+
+    <!-- Teeth Inputs -->
+    <div id="teethInputs" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+    <!-- Calculate Button -->
+    <div class="mt-4">
+      <button id="calculateBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Calculate Diagnosis</button>
+    </div>
+
+    <!-- Messages -->
+    <div id="messageBox" class="message-box hidden mt-4 p-3 rounded"></div>
+
+    <!-- Results -->
+    <div id="resultBox" class="hidden mt-6 p-4 border rounded bg-white shadow">
+      <div id="resultContent"></div>
+    </div>
+  </div>
+
+  <!-- Your Script -->
+  <script>
+    const teeth = ['13', '12', '11', '21', '22', '23'];
+
+    function generateToothInputs() {
+        const container = document.getElementById('teethInputs');
+        teeth.forEach(tooth => {
+            const toothDiv = document.createElement('div');
+            toothDiv.className = 'bg-gray-100 p-4 rounded-lg space-y-3';
+            toothDiv.innerHTML = `
+                <h4 class="font-bold text-gray-800 text-lg">Tooth #${tooth}</h4>
+                <div>
+                    <label for="currentLength-${tooth}" class="block text-gray-700 text-sm mb-1">Current Clinical Crown Length (mm):</label>
+                    <input type="number" id="currentLength-${tooth}" placeholder="e.g., 8.5" step="0.1" class="form-input border rounded p-1 w-full">
+                </div>
+                <div>
+                    <label for="toothWidth-${tooth}" class="block text-gray-700 text-sm mb-1">Current Clinical Crown width (mm):</label>
+                    <input type="number" id="toothWidth-${tooth}" placeholder="e.g., 8.5" step="0.1" class="form-input border rounded p-1 w-full">
+                </div>
+                <div>
+                    <label for="gingivalDepth-${tooth}" class="block text-gray-700 text-sm mb-1">Gingival Sulcus Depth (mm):</label>
+                    <input type="number" id="gingivalDepth-${tooth}" placeholder="e.g., 4.5" step="0.1" class="form-input border rounded p-1 w-full">
+                </div>
+                <div>
+                    <label for="boneSounding-${tooth}" class="block text-gray-700 text-sm mb-1">Bone Sounding from CEJ (mm):</label>
+                    <input type="number" id="boneSounding-${tooth}" placeholder="e.g., 1.5" step="0.1" class="form-input border rounded p-1 w-full">
+                </div>
+                <div>
+                    <label for="keratinizedGingiva-${tooth}" class="block text-gray-700 text-sm mb-1">Keratinized Gingiva (mm):</label>
+                    <input type="number" id="keratinizedGingiva-${tooth}" placeholder="e.g., 3" step="0.1" class="form-input border rounded p-1 w-full">
+                </div>
+            `;
+            container.appendChild(toothDiv);
+        });
+    }
+
+    function calculateDiagnosis() {
+        const caseName = document.getElementById('caseName').value;
+        const resultBox = document.getElementById('resultBox');
+        const resultContent = document.getElementById('resultContent');
+        const messageBox = document.getElementById('messageBox');
+        
+        resultBox.classList.add('hidden');
+        messageBox.classList.add('hidden');
+        resultContent.innerHTML = '';
+        messageBox.className = 'message-box hidden';
+
+        if (!caseName.trim()) {
+            messageBox.classList.remove('hidden');
+            messageBox.classList.add('bg-blue-100 text-blue-800');
+            messageBox.innerHTML = 'Please enter a case name.';
+            return;
+        }
+
+        const toothDataArray = [];
+        let allInputsValid = true;
+
+        teeth.forEach(tooth => {
+            const currentLength = parseFloat(document.getElementById(`currentLength-${tooth}`).value);
+            const gingivalDepth = parseFloat(document.getElementById(`gingivalDepth-${tooth}`).value);
+            const boneSounding = parseFloat(document.getElementById(`boneSounding-${tooth}`).value);
+            const toothWidth = parseFloat(document.getElementById(`toothWidth-${tooth}`).value);
+            const keratinizedGingiva = parseFloat(document.getElementById(`keratinizedGingiva-${tooth}`).value);
+
+            if (isNaN(currentLength) || isNaN(gingivalDepth) || isNaN(boneSounding) || isNaN(toothWidth) || isNaN(keratinizedGingiva)) {
+                allInputsValid = false;
+                return;
+            }
+
+            let diagnosis = '';
+            let treatment = '';
+            let caseType = '';
+            let treatmentDetails = '';
+            const isBoneNormal = boneSounding >= 3;
+            const isGingivaNormal = gingivalDepth <= 2;
+            const desiredLength = toothWidth / 0.78;
+
+            if (!isGingivaNormal) {
+                if (isBoneNormal) {
+                    caseType = '1A';
+                    diagnosis = 'Type 1A: Excess gingival tissue with normal bone level.';
+                    treatment = 'Gingivectomy or Gingivoplasty.';
+                    treatmentDetails = 'The issue is limited to soft tissue only.';
+                } else {
+                    caseType = '1B';
+                    diagnosis = 'Type 1B: Excess gingival tissue with high bone level.';
+                    treatment = 'Osseous Surgery.';
+                    treatmentDetails = `Remove ${(3 - boneSounding).toFixed(1)} mm of bone to restore the biologic width.`;
+                }
+            } else {
+                if (isBoneNormal) {
+                    caseType = '2A';
+                    diagnosis = 'Type 2A: Normal gingival quantity with normal bone level.';
+                    treatment = 'Apically Positioned Flap.';
+                    treatmentDetails = 'No bone removal needed, just repositioning the gingiva.';
+                    if (keratinizedGingiva < 2) {
+                        treatmentDetails += ' Note: Keratinized gingiva is less than 2 mm; a gingival graft may be required in the future.';
+                    }
+                } else {
+                    caseType = '2B';
+                    diagnosis = 'Type 2B: Normal gingival quantity with high bone level.';
+                    treatment = 'Osseous Surgery.';
+                    treatmentDetails = `Remove ${(3 - boneSounding).toFixed(1)} mm of bone to restore the biologic width.`;
+                    if (keratinizedGingiva < 2) {
+                        treatmentDetails += ' Note: Keratinized gingiva is less than 2 mm; a gingival graft may be required in the future.';
+                    }
+                }
+            }
+
+            const requiredExtension = desiredLength - currentLength;
+
+            toothDataArray.push({
+                toothNumber: tooth,
+                currentLength,
+                gingivalDepth,
+                boneSounding,
+                toothWidth,
+                keratinizedGingiva,
+                diagnosis,
+                treatment,
+                caseType,
+                treatmentDetails,
+                desiredLength: desiredLength.toFixed(1),
+                requiredExtension: requiredExtension.toFixed(1),
+            });
+        });
+
+        if (!allInputsValid) {
+            messageBox.classList.remove('hidden');
+            messageBox.classList.add('bg-yellow-100 text-yellow-800');
+            messageBox.innerHTML = 'Please enter all valid numbers for all teeth.';
+            return;
+        }
+
+        resultContent.innerHTML = `<h3 class="text-xl font-bold mb-2">Case: ${caseName}</h3>`;
+        toothDataArray.forEach(data => {
+            resultContent.innerHTML += `
+                <div class="border-b pb-4 mt-4">
+                    <p><span class="font-bold">Tooth #${data.toothNumber}:</span></p>
+                    <p>Diagnosis: ${data.diagnosis}</p>
+                    <p>Case Type: Coslet Type ${data.caseType}</p>
+                    <p>Desired Crown Length: ${data.desiredLength} mm</p>
+                    <p>Required Extension: ${data.requiredExtension} mm</p>
+                    <p>Suggested Treatment Plan: ${data.treatment}</p>
+                    <p>Notes: ${data.treatmentDetails}</p>
+                </div>
+            `;
+        });
+        resultBox.classList.remove('hidden');
+    
+        messageBox.classList.remove('hidden');
+        messageBox.classList.add('bg-green-100 text-green-800');
+        messageBox.innerHTML = 'Calculation complete!';
+    }
+
+    document.getElementById('calculateBtn').addEventListener('click', calculateDiagnosis);
+    window.onload = () => {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+        generateToothInputs();
+    };
+  </script>
+</body>
+</html>
